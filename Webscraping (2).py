@@ -904,6 +904,13 @@ katydid_df['Location'] = 'No location found',
 'Brewster Co., Tex']
 
 
+# In[141]:
+
+
+# save cricket_df using IPython magic
+get_ipython().run_line_magic('store', 'katydid_df')
+
+
 # ## Frog Dataframe
 
 # In[63]:
@@ -952,6 +959,12 @@ frog_df = df[['gen', 'sp', 'cnt', 'loc', 'lat', 'lon', 'type', 'file', 'sono.med
 
 # rename extracted columns for readability
 frog_df.columns = ['Genus', 'Species', 'Country', 'Location', 'Latitude', 'Longitude', 'Call Type', 'File', 'Spectrogram']
+
+
+# In[142]:
+
+
+get_ipython().run_line_magic('store', 'frog_df')
 
 
 # ## Downloading Files
