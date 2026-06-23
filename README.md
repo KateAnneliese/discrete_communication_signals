@@ -7,7 +7,7 @@ The code uses a combination of web scraping, API integration, image processing, 
 - The [Singing Insects of North America](https://songsofinsects.com/) website
 - The [Xeno-Canto](https://xeno-canto.org/) API
 
-For each species, the code extracts signal parameters from spectrograms and combines them with metadata such as taxonomy, location, temperature, and range information.
+For each species, the code extracts signal parameters from spectrograms and combines them with metadata, including taxonomy, location, temperature, and range.
 
 ## Extracted Signal Parameters
 
@@ -70,3 +70,23 @@ The final output of each pipeline is a structured dataset containing:
 - Extracted acoustic signal parameters
 
 These datasets can be used for comparative analyses of communication signals across species and taxonomic groups.
+
+# Function Guide
+
+## Webscraping.ipynb
+
+### Webscraping and API Integration
+* The code examines the cricket species page on the Singing Insects of North America website and creates a list, cricket_species_list, that stores all the cricket species.
+* The code then loops through cricket_species_list, visiting all the species pages. For each spectrogram it finds, it attempts to retrieve the corresponding range map, recording, description, temperature, and location. All the information and links found are put into a Pandas DataFrame named cricket_df.
+* The user can go through each location flagged by the code, choosing to replace it or leave it as is. This was added because the code didn't always correctly flag the cricket's location.
+* cricket_df is saved using IPython magic.
+* The same process is followed for the Singing Insects of North America katydid species page, creating a list named katydid_species_list and constructing katydid_df. katydid_df is also saved using IPython magic.
+* The code goes through every page of the Xeno-Canto API containing frog recordings and extracts all the information into a DataFrame, df. The necessary columns (genus, species, country, location, latitude, longitude, call type, audio file, and spectrogram) are extracted and put in another DataFrame, frog_df.
+* frog_df is stored using IPython magic.
+
+### Downloading and Organizing Files
+* get_file_id(url) is a helper function used to extract a file name (without its extension) from a URL. It is called when looping through cricket_df and katydid_df in order to assign file names to spectrograms before downloading them.
+* The code creates all the folders where spectrograms, audio files, and range maps will be downloaded.
+* download_file(url, path, headers) is a helper function used to safely download files, skipping HTML pages and error messages, and printing an error message with the exception if the download fails.
+* The code loops through all indices and rows in cricket_df and katydid_df, using get_file_id(url) and download_file(url, path, headers) to assign file names and download the spectrograms, audio files, and range maps.
+* download_frogs(frog_df, base_folder, headers) is a function that downloads all the audio files from frog_df
