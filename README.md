@@ -1,92 +1,157 @@
-# Discrete Communication Signals in Nature
+# Discrete Signals
 
-This repository contains the code used for the research project **Discrete Communication Signals in Nature**. The project investigates patterns in animal acoustic communication by extracting temporal signal characteristics from the calls of crickets, katydids, and frogs.
+Extracts acoustic parameters (element length, inter-element interval, inter-burst interval,
+elements per burst) from cricket and katydid call recordings archived on the
+[Singing Insects of North America (SINA)](https://orthsoc.org/sina) database, plus frog
+call recordings from [Xeno-Canto](https://xeno-canto.org). The pipeline is: **web scraping
+→ image/audio processing → a browsable viewer.**
 
-The code uses a combination of web scraping, API integration, image processing, and audio analysis to collect and process data across species. Data are obtained from:
+This README covers the web scraping and cricket processing code. See inline notebook
+comments for the katydid and frog pipelines.
 
-- The [Singing Insects of North America](https://songsofinsects.com/) website
-- The [Xeno-Canto](https://xeno-canto.org/) API
+## Setup
+pip install requests beautifulsoup4 pandas numpy matplotlib pillow opencv-python pytesseract librosa scipy
 
-For each species, the code extracts signal parameters from spectrograms and combines them with metadata, including taxonomy, location, temperature, and range.
+Tesseract OCR must also be installed system-side (`brew install tesseract` on macOS) —
+`pytesseract` is just a wrapper around the `tesseract` binary.
 
-## Extracted Signal Parameters
+Set an environment variable before running `Webscraping.ipynb`:
+export XENO_CANTO_API_KEY="your-key-here"
 
-The processing pipeline measures four temporal characteristics of each acoustic signal:
+(Free key from [xeno-canto.org](https://xeno-canto.org); only needed for the frog metadata pull.)
 
-- **Element length** – duration of an individual sound element
-- **Inter-element interval** – time between consecutive elements
-- **Inter-burst interval** – time between bursts (groups of elements)
-- **Elements per burst** – number of elements contained within a burst
+## Notebook run order
 
-Species that produce continuous sequences of elements rather than distinct bursts are assigned:
+1. **`Webscraping.ipynb`** — scrapes SINA + Xeno-Canto, downloads files, stores `cricket_df` / `katydid_df` / `frog_df`
+2. **`Code/Processing_Cricket_Spectrograms.ipynb`** — restores `cricket_df`, processes spectrogram images, stores `cricket_final`
+3. **`Code/Processing_Katydid_Spectrograms.ipynb`** — restores `katydid_df`, processes oscillogram images, stores `katydid_final`
+4. **`Code/Display_Function.ipynb`** — restores `cricket_final`, launches an interactive viewer widget
 
-- **Inter-burst interval = 0**
-- **Elements per burst = 0**
+Notebooks pass DataFrames between each other with IPython's `%store` magic. If a
+notebook errors on `%store -r some_df`, the upstream notebook hasn't been run yet in
+this kernel session.
 
-## Crickets
+---
 
-The cricket workflow uses spectrograms obtained from the Singing Insects of North America website.
+## `Webscraping.ipynb`
 
-1. Spectrograms and associated metadata are scraped and downloaded.
-2. Spectrogram images are processed to identify signal structure.
-3. The four temporal signal parameters are extracted.
-4. Results are combined with metadata including:
-   - Genus
-   - Species
-   - Temperature
-   - Location
-   - Range map information
-5. The final dataset is exported as a CSV file.
+### Cricket / katydid scraping loop
 
-## Katydids
+For each species on the SINA list page (`cricklist.htm` / `katylist.htm`), the notebook
+visits the species' own page and pulls out:
 
-Katydids follow a workflow similar to that used for crickets. However, the katydid spectrograms available from Singing Insects of North America are generally less uniform and contain more visual noise.
+- the **range map** — found either via the page's standard image table, or by falling
+  back to scanning table rows for a caption containing the word "map"
+- every **recording block** (`<div class="recording">`) on the page, from which it grabs:
+  - the **spectrogram/oscillogram image** (matched by looking for the words
+    "spectrogram", "sonogram", "waveform", "graph", etc. in the image's `src`, `alt`,
+    or surrounding text)
+  - the **audio file** (`<audio><source>` tag)
+  - **temperature** (extracted around the "°" character) and **location** (extracted
+    around the words "from"/"in") from the recording's description text
 
-To account for these differences, a separate spectrogram-processing function is used that is tailored to katydid recordings while extracting the same four temporal signal parameters.
+A short courtesy `time.sleep()` runs between species requests so the SINA server isn't hammered.
 
-## Frogs
+Each recording becomes one row in `cricket_grouped_data` / `katydid_grouped_data`, which
+is turned into `cricket_df` / `katydid_df` and stored with `%store` for the processing notebooks.
 
-Unlike the cricket and katydid datasets, frog data are obtained from audio recordings through the Xeno-Canto API.
+### Frog metadata pull
 
-The workflow is:
+Loops over all 57 pages of the Xeno-Canto REST API for the `grp:frogs` query, flattens
+the nested JSON into `frog_df` (genus, species, location, coordinates, call type, audio
+file URL, spectrogram URL).
 
-1. Download audio recordings.
-2. Generate spectrograms from the audio files.
-3. Apply preprocessing and noise-reduction techniques.
-4. Extract the same four temporal signal parameters:
-   - Element length
-   - Inter-element interval
-   - Inter-burst interval
-   - Elements per burst
-5. Export the processed results for further analysis.
+### Downloading files
 
-## Output
+- **`download_file(url, path, headers)`** — safely downloads a URL to disk, but first
+  inspects the response `Content-Type` and body to reject HTML error pages that SINA
+  sometimes serves in place of the actual image (so a 404 page never gets saved with a
+  `.gif` extension).
+- **`get_file_id(url)`** — extracts the filename (no extension) from a URL, used as a
+  unique ID so a species with multiple recordings doesn't have its files overwritten.
+- **Cricket/katydid download loops** — iterate `cricket_df` / `katydid_df` row by row,
+  create a `Genus_species` subfolder under `Crickets/` or `Katydids/`, and download the
+  spectrogram, audio clip, and range map into it, named
+  `{Genus_species}_{spectrogram|audio|map}_{file_id}.{ext}`.
+- **`download_frogs(frog_df, base_folder, headers)`** — same idea for frog audio, with a
+  per-species running counter (`_audio_1`, `_audio_2`, ...) since Xeno-Canto doesn't
+  supply a stable per-recording ID.
 
-The final output of each pipeline is a structured dataset containing:
+---
 
-- Taxonomic information
-- Geographic information
-- Environmental metadata (when available)
-- Extracted acoustic signal parameters
+## `Code/Processing_Cricket_Spectrograms.ipynb`
 
-These datasets can be used for comparative analyses of communication signals across species and taxonomic groups.
+Turns each downloaded cricket spectrogram image into four numbers:
+`Element_Length`, `Inter-Element_Interval`, `Inter-Burst_Interval`, `Elements_Per_Burst`.
 
-# Function Guide
+### Pipeline (`cricket_process`)
 
-## Webscraping.ipynb
+1. **OCR the x-axis** (`read_x_axis_seconds`) to find the time span the image represents.
+   Finds the axis line by scanning for a long dark horizontal run, then OCRs the
+   numeric labels at each end (falling back to interior sample points and a linear fit
+   if the end labels aren't readable). Some files have unreliable axes entirely — for
+   those, `MANUAL_MAX_SECONDS` supplies the time span directly, skipping OCR.
+2. **Compute `pixel_time`** = seconds represented by one pixel of image width.
+3. **Locate the dominant frequency band** (`locate_signal_band`) — cricket calls are
+   narrowband, so the row range containing the signal is found and everything else discarded.
+4. **Re-normalize ink** within that band so faint elements aren't washed out by
+   normalizing against the full image's contrast range.
+5. **Adaptive hysteresis thresholding** (`detect_signal_list_adaptive`) turns the ink
+   intensity into a clean binary on/off column signal. It tries a descending cascade of
+   threshold pairs and scores each candidate, picking the one that best balances signal
+   completeness against noise.
+6. **Trim leading/trailing silence**, then run-length encode the signal into
+   `(state, duration)` time buckets.
+7. **Classify gaps** (`classify_intervals`) — splits gap durations into two clusters
+   (inter-element vs. inter-burst) using exhaustive-silhouette k-means, with several
+   guard conditions to avoid declaring false burst structure on trill species.
 
-### Webscraping and API Integration
-* The code examines the cricket species page on the Singing Insects of North America website and creates a list, cricket_species_list, that stores all the cricket species.
-* The code then loops through cricket_species_list, visiting all the species pages. For each spectrogram it finds, it attempts to retrieve the corresponding range map, recording, description, temperature, and location. All the information and links found are put into a Pandas DataFrame named cricket_df.
-* The user can go through each location flagged by the code, choosing to replace it or leave it as is. This was added because the code didn't always correctly flag the cricket's location.
-* cricket_df is saved using IPython magic.
-* The same process is followed for the Singing Insects of North America katydid species page, creating a list named katydid_species_list and constructing katydid_df. katydid_df is also saved using IPython magic.
-* The code goes through every page of the Xeno-Canto API containing frog recordings and extracts all the information into a DataFrame, df. The necessary columns (genus, species, country, location, latitude, longitude, call type, audio file, and spectrogram) are extracted and put in another DataFrame, frog_df.
-* frog_df is stored using IPython magic.
+### Species-specific patches
 
-### Downloading and Organizing Files
-* get_file_id(url) is a helper function used to extract a file name (without its extension) from a URL. It is called when looping through cricket_df and katydid_df in order to assign file names to spectrograms before downloading them.
-* The code creates all the folders where spectrograms, audio files, and range maps will be downloaded.
-* download_file(url, path, headers) is a helper function used to safely download files, skipping HTML pages and error messages, and printing an error message with the exception if the download fails.
-* The code loops through all indices and rows in cricket_df and katydid_df, using get_file_id(url) and download_file(url, path, headers) to assign file names and download the spectrograms, audio files, and range maps.
-* download_frogs(frog_df, base_folder, headers) is a function that downloads all the audio files from frog_df
+Real-world spectrograms are messy, and a handful of species needed special-casing:
+
+- **`MANUAL_MAX_SECONDS`** — files where OCR can't read the x-axis at all; time span
+  supplied by hand (tick-mark counting or comparison with a similar species' image).
+- **`MANUAL_RESULTS`** — a few species where the image resolution is too low for the
+  algorithm to reliably separate elements/bursts even with the pipeline steps above
+  (e.g. gaps that are sub-pixel, faint first elements that vanish at every threshold,
+  three-cluster gap structures that the two-cluster classifier can't represent). Values
+  here were determined by visual inspection and are returned directly, bypassing the
+  image pipeline.
+- **`FAINT_ELEMENT_THRESHOLD`** — a few species have one very faint first element that's
+  only visible at a lower detection threshold than the pipeline's default scorer picks
+  (which favors the highest threshold that still gives a clean signal). These entries
+  force the pipeline to use a specific lower threshold instead.
+- **Excluded species** (`Hapithus_melodius`, `Gryllus_cayensis`, `Gryllus_ovisopis`) —
+  skipped entirely in the batch run because their songs (accelerating chirps,
+  courtship song, two-male fighting recordings) don't fit the four-parameter model at all.
+
+### Batch run and merge
+
+The last few cells process every spectrogram under `Crickets/`, write
+`Crickets/cricket_results.csv`, then join the results back onto `cricket_df` (from
+`Webscraping.ipynb`) using a shared spectrogram ID extracted from both the SINA URL and
+the local filename via regex. The joined result, `cricket_final`, is stored with
+`%store` for `Display_Function.ipynb`.
+
+---
+
+## Final DataFrame schema
+
+`cricket_final` (and the equivalent `katydid_final`) columns:
+
+| Column | Description |
+|---|---|
+| `Genus`, `Species` | Parsed from the SINA "Genus species" name |
+| `Temperature` | Recording temperature (°C) |
+| `Location` | Recording location |
+| `Description` | Audio file description from SINA |
+| `Map` | URL to the SINA range map image |
+| `File_ID` | Spectrogram identifier from the SINA URL, used to link images to rows |
+| `Element_Length` | Mean pulse duration (s) |
+| `Inter-Element_Interval` | Mean within-burst gap (s) |
+| `Inter-Burst_Interval` | Mean between-burst gap (s); 0 for trill/single-element species |
+| `Elements_Per_Burst` | Median elements per burst; 1 for trill species |
+
+These exact column names are required by `Display_Function.ipynb` — don't rename them
+without updating the viewer too.
