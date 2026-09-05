@@ -1,8 +1,13 @@
 # Discrete Signals
 
-A four-stage pipeline for cricket, katydid, and frog recordings: scrape recordings and metadata from SINA and Xeno-Canto, generate or OCR each recording's spectrogram, run it through image-processing detection to extract acoustic parameters (pulse length, gap timing, burst structure), then browse the results in an interactive viewer.
+A four-stage pipeline for cricket, katydid, and frog recordings: scrape
+recordings and metadata from SINA and Xeno-Canto, generate or OCR each
+recording's spectrogram, run it through image-processing detection to extract
+acoustic parameters (pulse length, gap timing, burst structure), then browse
+the results in an interactive viewer.
 
-Everything lives in Code/; paths below are relative to that folder unless noted.
+Everything lives in [`Code/`](Code/); paths below are relative to that folder
+unless noted.
 
 ## Setup
 
@@ -12,7 +17,7 @@ pip install -r requirements.txt
 
 - **Tesseract** (for the cricket pipeline's x-axis OCR) is a separate install:
   `brew install tesseract` on macOS.
-- **`XENO_CANTO_API_KEY`**--a free key from [xeno-canto.org](https://xeno-canto.org/),
+- **`XENO_CANTO_API_KEY`**: a free key from [xeno-canto.org](https://xeno-canto.org/),
   needed for the frog metadata pull in `Webscraping.ipynb`.
   `export XENO_CANTO_API_KEY="your-key"`
 
@@ -42,10 +47,10 @@ Webscraping.ipynb                                   (run first--feeds all three 
               → Processing_Frog_Spectrograms_Multiple_Bursts.ipynb  (multi-burst-type)
 
 Viewers (run after the pipeline they read from):
-  Display_Function.ipynb               --cricket / katydid(multi) / frog(multi) browsers
-  Katydid_Genus_Display_Function.ipynb --katydid genus spot-checker
-  Frog_Genus_Display_Function.ipynb    --frog genus spot-checker
-  Frog_Species_Display_Function.ipynb  --frog species spot-checker
+  Display_Function.ipynb               : cricket / katydid(multi) / frog(multi) browsers
+  Katydid_Genus_Display_Function.ipynb : katydid genus spot-checker
+  Frog_Genus_Display_Function.ipynb    : frog genus spot-checker
+  Frog_Species_Display_Function.ipynb  : frog species spot-checker
 ```
 
 DataFrames pass between notebooks via IPython's `%store`, which only lives
@@ -71,11 +76,11 @@ file, and range map into `~/Discrete_Signals/{Crickets,Katydids,Frogs}/`.
 | `frog_df` | Genus, Species, Country, Location, Latitude, Longitude, Call Type, File, Spectrogram | `Frog_Clip_Log.ipynb` |
 
 **Functions:**
-- `scrape_sina(list_url)`--scrapes every species on a SINA list page into one DataFrame, built from the helpers below it.
-- `get_species_list`, `fetch_soup`, `find_range_map_url`, `parse_temperature`, `parse_location`, `extract_recordings`--the pieces `scrape_sina` is made of.
-- `review_locations` / `apply_reviewed_locations`--the manual location cleanup pass, and the loader that re-applies its saved results from `data/*_locations_reviewed.csv`.
-- `fetch_frog_recordings()`--pages through the Xeno-Canto `grp:frogs` results.
-- `file_id_from_url`, `download_asset`, `download_sina_assets`, `download_frog_audio`--download everything a scraped row points to into the right folder.
+- `scrape_sina(list_url)`: scrapes every species on a SINA list page into one DataFrame, built from the helpers below it.
+- `get_species_list`, `fetch_soup`, `find_range_map_url`, `parse_temperature`, `parse_location`, `extract_recordings`: the pieces `scrape_sina` is made of.
+- `review_locations` / `apply_reviewed_locations`: the manual location cleanup pass, and the loader that re-applies its saved results from `data/*_locations_reviewed.csv`.
+- `fetch_frog_recordings()`: pages through the Xeno-Canto `grp:frogs` results.
+- `file_id_from_url`, `download_asset`, `download_sina_assets`, `download_frog_audio`: download everything a scraped row points to into the right folder.
 
 ---
 
@@ -96,13 +101,13 @@ steady rhythm.
 **Output:** `Crickets/cricket_results.csv` (raw), `cricket.csv` (merged, final).
 
 **Functions:**
-- `read_x_axis_seconds` (+ `ocr_number_from_crop`)--reads the time span off the image via OCR, with a fallback line fit across several labels.
-- `locate_signal_band`--crickets are narrowband, so this finds the row range where the call's energy actually lives.
-- `detect_signal_list_adaptive`--turns ink into a binary on/off signal by trying a ladder of thresholds and keeping the best-scoring one.
-- `classify_intervals`--splits the off-gaps into inter-element vs. inter-burst and returns the four numbers above.
-- `cricket_process`--runs one file through the whole thing.
-- `gaussian_filter1d`, `silhouette`, `kmeans2`, `choose_k`, `rle`, `clean_signal_runs`, `group_consecutive`--small shared helpers (smoothing, clustering, run-length encoding).
-- `spec_id_from_url` / `spec_id_from_filename`--pull the join key out of a SINA URL or local filename.
+- `read_x_axis_seconds` (+ `ocr_number_from_crop`): reads the time span off the image via OCR, with a fallback line fit across several labels.
+- `locate_signal_band`: crickets are narrowband, so this finds the row range where the call's energy actually lives.
+- `detect_signal_list_adaptive`: turns ink into a binary on/off signal by trying a ladder of thresholds and keeping the best-scoring one.
+- `classify_intervals`: splits the off-gaps into inter-element vs. inter-burst and returns the four numbers above.
+- `cricket_process`: runs one file through the whole thing.
+- `gaussian_filter1d`, `silhouette`, `kmeans2`, `choose_k`, `rle`, `clean_signal_runs`, `group_consecutive`: small shared helpers (smoothing, clustering, run-length encoding).
+- `spec_id_from_url` / `spec_id_from_filename`: pull the join key out of a SINA URL or local filename.
 
 ---
 
@@ -117,15 +122,15 @@ cricket pipeline, plus the min and max elements found in any one burst.
 **Output:** `Katydids/katydid_results.csv` (raw), `katydid_single_burst_type.csv` (merged, final).
 
 **Functions:**
-- `compute_signal_crop`--finds where the real signal starts and ends, so lead-in/lead-out silence gets trimmed without touching the inter-burst gaps being measured.
-- `generate_spectrogram_image`--bandpass-filters the clip around its dominant frequency and saves a filled oscillogram.
-- `extract_outer_band_ink` / `find_centerline_row`--measure ink while excluding just a thin band around the baseline, so quiet elements near zero amplitude still register.
-- `detect_signal_list_adaptive`--same threshold-ladder idea as crickets, with an extra fallback stage for continuous trills.
-- `rescue_quiet_bursts`--recovers a burst that's real but too quiet next to a much louder one in the same recording.
-- `classify_intervals`--same as crickets, plus min/max elements per burst.
-- `detect_audio_elements` / `select_crop_window`--pick a clean crop window for the handful of species whose recordings are too long or multi-scale for normal detection.
-- `katydid_process`--runs one audio file through the whole thing; `process_eremopedes_covilleae` is a one-off variant for a species whose gaps the default settings were merging.
-- `spec_id_from_url`, `spec_id_from_filename`, `audio_id_from_url`, `audio_id_from_filename`, `generated_spectrogram_path`--id/path helpers for the join and the generated-image cache.
+- `compute_signal_crop`: finds where the real signal starts and ends, so lead-in/lead-out silence gets trimmed without touching the inter-burst gaps being measured.
+- `generate_spectrogram_image`: bandpass-filters the clip around its dominant frequency and saves a filled oscillogram.
+- `extract_outer_band_ink` / `find_centerline_row`: measure ink while excluding just a thin band around the baseline, so quiet elements near zero amplitude still register.
+- `detect_signal_list_adaptive`: same threshold-ladder idea as crickets, with an extra fallback stage for continuous trills.
+- `rescue_quiet_bursts`: recovers a burst that's real but too quiet next to a much louder one in the same recording.
+- `classify_intervals`: same as crickets, plus min/max elements per burst.
+- `detect_audio_elements` / `select_crop_window`: pick a clean crop window for the handful of species whose recordings are too long or multi-scale for normal detection.
+- `katydid_process`: runs one audio file through the whole thing; `process_eremopedes_covilleae` is a one-off variant for a species whose gaps the default settings were merging.
+- `spec_id_from_url`, `spec_id_from_filename`, `audio_id_from_url`, `audio_id_from_filename`, `generated_spectrogram_path`: id/path helpers for the join and the generated-image cache.
 - Shared with crickets: `gaussian_filter1d`, `silhouette`, `kmeans2`, `choose_k`, `rle`, `clean_signal_runs`, `group_consecutive`, `find_dominant_frequency`.
 
 Species-specific tuning (why certain species need a different threshold) is
@@ -139,19 +144,19 @@ Some species alternate between different kinds of bursts in one recording--a pat
 collapses everything into one summary. This standalone variant reuses #3's
 image generation and detection unchanged, and adds:
 
-- **Burst-type clustering**--group each burst by element count/length/spacing and cluster with k-means + silhouette scoring, the same technique used for gap classification, generalized to more than one feature and more than two groups.
-- **Low-volume burst rescue**--a quiet burst can lose to a much louder one in the same recording, since ink is normalized against the whole image; this re-thresholds anything the global pass missed, locally.
+- **Burst-type clustering**: group each burst by element count/length/spacing and cluster with k-means + silhouette scoring, the same technique used for gap classification, generalized to more than one feature and more than two groups.
+- **Low-volume burst rescue**: a quiet burst can lose to a much louder one in the same recording, since ink is normalized against the whole image; this re-thresholds anything the global pass missed, locally.
 
 Produces one row per `(file, burst type)`--see the output table below.
 
 **Output:** `Katydids/katydid_results_multi_bursts.csv` (raw), `katydid_multi_burst_type.csv` (merged, final).
 
 **New functions on top of #3's:**
-- `segment_bursts`--#3's `classify_intervals`, refactored to return every burst's own stats instead of one recording-wide summary.
-- `kmeans_nd`, `silhouette_nd`, `choose_k_burst_types`, `classify_burst_types`--the multi-dimensional, multi-cluster generalization of the gap-clustering logic, used to sort bursts into types.
-- `compute_burst_frequencies`--pulls each burst's own dominant pitch as an optional 4th clustering feature, for cases count/length/spacing alone can't separate.
-- `render_raw_crop_png`, `find_missed_element_regions`, `analyze_missed_element_region`, `rescued_regions_to_bursts`--the missed-element rescue mechanism: find a secondary burst straight from the raw audio (bypassing whatever erased it from the image), analyze it as its own crop, and merge it in.
-- `katydid_process_multi`--runs one file through the whole thing and returns a list of results, one per burst type.
+- `segment_bursts`: #3's `classify_intervals`, refactored to return every burst's own stats instead of one recording-wide summary.
+- `kmeans_nd`, `silhouette_nd`, `choose_k_burst_types`, `classify_burst_types`: the multi-dimensional, multi-cluster generalization of the gap-clustering logic, used to sort bursts into types.
+- `compute_burst_frequencies`: pulls each burst's own dominant pitch as an optional 4th clustering feature, for cases count/length/spacing alone can't separate.
+- `render_raw_crop_png`, `find_missed_element_regions`, `analyze_missed_element_region`, `rescued_regions_to_bursts`: the missed-element rescue mechanism--find a secondary burst straight from the raw audio (bypassing whatever erased it from the image), analyze it as its own crop, and merge it in.
+- `katydid_process_multi`: runs one file through the whole thing and returns a list of results, one per burst type.
 
 | Output Column | Description |
 |---|---|
@@ -193,7 +198,7 @@ the clip log instead of being read off the image.
 
 **Functions:** `generate_spectrogram_image`, `extract_outer_band_ink`,
 `find_centerline_row`, `detect_signal_list_adaptive`, `classify_intervals`,
-`frog_process`--same roles as the katydid pipeline's equivalents, tuned for
+`frog_process`: same roles as the katydid pipeline's equivalents, tuned for
 oscillogram noise instead of generated-spectrogram artifacts. Shared helpers:
 `gaussian_filter1d`, `silhouette`, `kmeans2`, `choose_k`, `rle`,
 `clean_signal_runs`, `find_dominant_frequency`.
@@ -212,9 +217,9 @@ that got merged together or catching real gaps between calls.
 Same ten output columns as #4. **Output:** `Cropped_Frogs_Specs/frog_results_multi_bursts.csv`, `frog_multi_burst_type.csv` (merged, final).
 
 **Functions beyond #4's equivalents:** `true_silence_split` /
-`try_split_on_true_silence`--split a burst at a gap that genuinely drops to
-silence. `split_signal_on_valleys`--split an on-run at an internal dip deep
-enough to be two close-together elements. `frog_process_multi`--the
+`try_split_on_true_silence`: split a burst at a gap that genuinely drops to
+silence. `split_signal_on_valleys`: split an on-run at an internal dip deep
+enough to be two close-together elements. `frog_process_multi`: the
 per-clip entry point, returning one result per burst type.
 
 ---
@@ -226,8 +231,8 @@ All viewer classes live in
 a thin wrapper: import the class, restore its DataFrame with `%store -r`,
 instantiate it.
 
-- **`SpectrogramViewer`**--pages through every species and spectrogram in order, showing each row's numbers next to its image. Used by `Display_Function.ipynb` (`CricketViewer`, `KatydidViewer`, `FrogViewer`).
-- **`RandomSpectrogramViewer`**--shows one random spectrogram per group and lets you re-roll--a quick spot check rather than an exhaustive browse. Used by the three spot-checker notebooks (`KatydidGenusViewer`, `FrogGenusViewer`, `FrogSpeciesViewer`).
+- **`SpectrogramViewer`**: pages through every species and spectrogram in order, showing each row's numbers next to its image. Used by `Display_Function.ipynb` (`CricketViewer`, `KatydidViewer`, `FrogViewer`).
+- **`RandomSpectrogramViewer`**: shows one random spectrogram per group and lets you re-roll--a quick spot check rather than an exhaustive browse. Used by the three spot-checker notebooks (`KatydidGenusViewer`, `FrogGenusViewer`, `FrogSpeciesViewer`).
 
 `KatydidViewer` matches images by `Spec_ID`, not `File_ID`--`File_ID` traces
 back to the audio source for the CSV's sake, but the locally generated PNG is
