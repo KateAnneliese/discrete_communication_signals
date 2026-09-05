@@ -6,7 +6,7 @@ recording's spectrogram, run it through image-processing detection to extract
 acoustic parameters (pulse length, gap timing, burst structure), then browse
 the results in an interactive viewer.
 
-Everything lives in (Code/); paths below are relative to that folder
+Everything lives in "Code/"; paths below are relative to that folder
 unless noted.
 
 ## Setup
