@@ -1,0 +1,24 @@
+# Python 3.10+
+#
+# Web scraping
+requests
+beautifulsoup4
+
+# Data
+numpy
+pandas
+
+# Audio
+librosa
+soundfile
+scipy
+
+# Images / OCR
+pillow
+opencv-python
+pytesseract          # also needs the Tesseract binary: `brew install tesseract`
+
+# Notebooks and the viewer widgets
+notebook
+ipywidgets
+matplotlib
