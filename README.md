@@ -6,8 +6,8 @@ recording's spectrogram, run it through image-processing detection to extract
 acoustic parameters (pulse length, gap timing, burst structure), then browse
 the results in an interactive viewer.
 
-Everything lives in 'Code/'; paths below are relative to that folder
-unless noted.
+All notebooks sit at the repo root; paths below are relative to that unless
+noted.
 
 ## Setup
 
@@ -37,7 +37,7 @@ variant(s) you actually want.
 Webscraping.ipynb                                   (run first--feeds all three tracks)
 │
 ├─ Crickets:  Processing_Cricket_Spectrograms.ipynb
-│             range_map_processing.ipynb    (optional--cricket range-map coverage/overlap)
+│             Range_Map_Processing.ipynb    (optional--cricket range-map coverage/overlap)
 │
 ├─ Katydids:  Processing_Katydid_Spectrograms.ipynb                 (single-burst)
 │             Processing_Katydid_Spectrograms_Multiple_Bursts.ipynb (multi-burst-type)
@@ -78,7 +78,7 @@ file, and range map into `~/Discrete_Signals/{Crickets,Katydids,Frogs}/`.
 **Functions:**
 - `scrape_sina(list_url)`: scrapes every species on a SINA list page into one DataFrame, built from the helpers below it.
 - `get_species_list`, `fetch_soup`, `find_range_map_url`, `parse_temperature`, `parse_location`, `extract_recordings`: the pieces `scrape_sina` is made of.
-- `review_locations` / `apply_reviewed_locations`: the manual location cleanup pass, and the loader that re-applies its saved results from `data/*_locations_reviewed.csv`.
+- `review_locations` / `apply_reviewed_locations`: the manual location cleanup pass, and the loader that re-applies its saved results from `*_locations_reviewed.csv`.
 - `fetch_frog_recordings()`: pages through the Xeno-Canto `grp:frogs` results.
 - `file_id_from_url`, `download_asset`, `download_sina_assets`, `download_frog_audio`: download everything a scraped row points to into the right folder.
 
@@ -258,7 +258,7 @@ for everyone.
 
 ## Range-map analysis (crickets)
 
-`range_map_processing.ipynb` is a standalone extra: it reads the cricket
+`Range_Map_Processing.ipynb` is a standalone extra: it reads the cricket
 range-map GIFs from `Webscraping.ipynb` and works out, per species, how much
 of the map its occurrence dots cover and how much its range overlaps with
 every other species. Colored dots are told apart from the neutral background,
