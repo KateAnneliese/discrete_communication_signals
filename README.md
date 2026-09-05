@@ -6,7 +6,7 @@ recording's spectrogram, run it through image-processing detection to extract
 acoustic parameters (pulse length, gap timing, burst structure), then browse
 the results in an interactive viewer.
 
-Everything lives in "Code/"; paths below are relative to that folder
+Everything lives in 'Code/'; paths below are relative to that folder
 unless noted.
 
 ## Setup
@@ -226,17 +226,22 @@ per-clip entry point, returning one result per burst type.
 
 ## Viewers
 
-All viewer classes live in
-[`Code/spectrogram_viewer.py`](Code/spectrogram_viewer.py). Each notebook is
-a thin wrapper: import the class, restore its DataFrame with `%store -r`,
-instantiate it.
+Four notebooks for browsing the processed results against the images they
+were measured from.
 
-- **`SpectrogramViewer`**: pages through every species and spectrogram in order, showing each row's numbers next to its image. Used by `Display_Function.ipynb` (`CricketViewer`, `KatydidViewer`, `FrogViewer`).
-- **`RandomSpectrogramViewer`**: shows one random spectrogram per group and lets you re-roll--a quick spot check rather than an exhaustive browse. Used by the three spot-checker notebooks (`KatydidGenusViewer`, `FrogGenusViewer`, `FrogSpeciesViewer`).
+- **`Display_Function.ipynb`**: the main browser. Three sections--cricket, katydid, frog--each stepping through every species and every spectrogram in order, showing that row's numbers next to its image. Reads `cricket_final`, `katydid_final_multi`, and `frog_final_multi`.
+- **`Katydid_Genus_Display_Function.ipynb`**: a quick spot check instead of an exhaustive browse--one random spectrogram per katydid genus, with a button to re-roll.
+- **`Frog_Genus_Display_Function.ipynb`**: same idea, for frog genera.
+- **`Frog_Species_Display_Function.ipynb`**: same idea, but the species is fixed and only the spectrogram re-rolls.
 
-`KatydidViewer` matches images by `Spec_ID`, not `File_ID`--`File_ID` traces
-back to the audio source for the CSV's sake, but the locally generated PNG is
-named after the SINA spectrogram, which is what `Spec_ID` preserves.
+Each notebook is fully self-contained--its viewer class is defined right
+there, not imported from a shared file--so it just restores its DataFrame
+with `%store -r` and instantiates its own class.
+
+One join-key detail worth knowing: the katydid viewers match images by
+`Spec_ID`, not `File_ID`--`File_ID` traces back to the audio source for the
+CSV's sake, but the locally generated PNG is named after the SINA
+spectrogram, which is what `Spec_ID` preserves.
 
 ---
 
